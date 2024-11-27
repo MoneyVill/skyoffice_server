@@ -2,6 +2,8 @@ import { Schema, ArraySchema, SetSchema, MapSchema } from '@colyseus/schema'
 
 export interface IPlayer extends Schema {
   name: string
+  money: number
+  score: number
   x: number
   y: number
   anim: string

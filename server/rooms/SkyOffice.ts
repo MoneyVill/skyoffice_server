@@ -7,6 +7,7 @@ import { IRoomData } from '../../types/Rooms'
 import { whiteboardRoomIds } from './schema/OfficeState'
 import PlayerUpdateCommand from './commands/PlayerUpdateCommand'
 import PlayerUpdateNameCommand from './commands/PlayerUpdateNameCommand'
+import PlayerUpdateInfoCommand from './commands/PlayerUpdateInfoCommand'
 import {
   ComputerAddUserCommand,
   ComputerRemoveUserCommand,
@@ -117,6 +118,14 @@ export class SkyOffice extends Room<OfficeState> {
       })
     })
 
+    this.onMessage(Message.UPDATE_PLAYER_INFO, (client, message: { money: number; score: number }) => {
+      this.dispatcher.dispatch(new PlayerUpdateInfoCommand(), {
+        client,
+        money: message.money,
+        score: message.score,
+      })
+    })
+
     // when a player is ready to connect, call the PlayerReadyToConnectCommand
     this.onMessage(Message.READY_TO_CONNECT, (client) => {
       const player = this.state.players.get(client.sessionId)
@@ -166,6 +175,11 @@ export class SkyOffice extends Room<OfficeState> {
   }
 
   onJoin(client: Client, options: any) {
+    // const player = new Player()
+    // player.name = options.name || 'Unnamed Player'; // Optionally set name from options
+    // player.money = options.money || 0; // Initialize money
+    // player.score = options.score || 0; // Initialize score
+    // this.state.players.set(client.sessionId, player)
     this.state.players.set(client.sessionId, new Player())
     client.send(Message.SEND_ROOM_DATA, {
       id: this.roomId,
