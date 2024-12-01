@@ -16,12 +16,22 @@ import {
   WhiteboardRemoveUserCommand,
 } from './commands/WhiteboardUpdateArrayCommand'
 import ChatMessageUpdateCommand from './commands/ChatMessageUpdateCommand'
+import QuizRequestCommand from './commands/QuizRequestCommand'
+import QuizLeaveCommand from './commands/QuizLeaveCommand'
 
 export class SkyOffice extends Room<OfficeState> {
   private dispatcher = new Dispatcher(this)
   private name: string
   private description: string
   private password: string | null = null
+  private quizInProgress: boolean = false;
+  private quizTimer: NodeJS.Timeout | null = null;
+  private currentQuestionNumber: number = 0;
+  private quizTimerStart: number | null = null;
+  private quizTimerDuration: number | null = null;
+  private prequizTimer: NodeJS.Timeout | null = null;
+  private prequizTimerStart: number | null = null;
+  private prequizTimerDuration: number | null = null;
 
   async onCreate(options: IRoomData) {
     const { name, description, password, autoDispose } = options
@@ -38,7 +48,9 @@ export class SkyOffice extends Room<OfficeState> {
     this.setMetadata({ name, description, hasPassword })
 
     this.setState(new OfficeState())
-
+    // 퀴즈 관리 로직 초기화
+    this.initializeQuiz();
+    
     // HARD-CODED: Add 5 computers in a room
     for (let i = 0; i < 5; i++) {
       this.state.computers.set(String(i), new Computer())
@@ -153,6 +165,98 @@ export class SkyOffice extends Room<OfficeState> {
         { except: client }
       )
     })
+
+    // 클라이언트의 퀴즈 참여 요청 처리
+    this.onMessage(Message.REQUEST_QUIZ, (client) => {
+      this.dispatcher.dispatch(new QuizRequestCommand(), {
+        client,
+        quizInProgress: this.quizInProgress,
+        currentQuestionNumber: this.currentQuestionNumber,
+        timeUntilNextQuiz: this.getQuizRemainingTime(),
+        remainingTime: this.getPreQuizRemainingTime(),
+      })
+    })
+
+    // 클라이언트의 퀴즈 나가기 요청 처리
+    this.onMessage(Message.LEAVE_QUIZ, (client) => {
+      this.dispatcher.dispatch(new QuizLeaveCommand(), {
+        client,
+      });
+    });
+
+  }
+    
+  // 퀴즈 관리 로직
+  initializeQuiz() {
+    // 첫 퀴즈 시작준비
+    this.readyQuiz();
+  }
+  
+  startQuiz() {
+    this.quizInProgress = true;
+  
+    // 타이머 시작 시간 및 지속 시간 설정
+    this.quizTimerStart = Date.now();
+    this.quizTimerDuration = 10000; // 밀리초 단위
+  
+    // 모든 클라이언트에게 퀴즈 시작 메시지 전송
+    this.broadcast(Message.START_QUIZ, {
+      curQuiz: this.currentQuestionNumber,
+      quizTime: this.quizTimerDuration,
+    });
+  
+    // 10초 후에 퀴즈 종료
+    this.quizTimer = setTimeout(() => {
+      this.endQuiz();
+    }, this.quizTimerDuration);
+  }
+
+  endQuiz() {
+    this.quizInProgress = false;
+
+    // 퀴즈 종료 메시지 전송 (필요하다면)
+    this.broadcast(Message.END_QUIZ);
+    this.readyQuiz()
+  }
+  
+  readyQuiz() {
+    this.currentQuestionNumber = this.getQuizQuestionNumber();
+    // 타이머 시작 시간 및 지속 시간 설정
+    this.prequizTimerStart = Date.now();
+    this.prequizTimerDuration = 3000; // 밀리초 단위
+
+    this.prequizTimer = setTimeout(() => {
+      this.startQuiz();
+    }, this.prequizTimerDuration);
+  }
+
+  getQuizRemainingTime() {
+    // 현재 시간과 퀴즈 종료 시간의 차이 계산
+    if (this.quizTimerStart !== null && this.quizTimerDuration !== null) {
+      const elapsed = Date.now() - this.quizTimerStart;
+      const remaining = this.quizTimerDuration - elapsed;
+      const remainingSeconds = remaining / 1000;
+
+      return remainingSeconds > 0 ? remainingSeconds : 0;
+    }
+    return 0;
+  }
+
+  getPreQuizRemainingTime() {
+    if (this.prequizTimerStart !== null && this.prequizTimerDuration !== null) {
+      const elapsed = Date.now() - this.prequizTimerStart;
+      const remaining = this.prequizTimerDuration - elapsed;
+      const remainingSeconds = remaining / 1000;
+
+      return remainingSeconds > 0 ? remainingSeconds : 0;
+    }
+    return 0;
+  }
+
+  getQuizQuestionNumber() {
+    // 문제 번호 선택 로직 (랜덤 또는 순차적으로)
+    // 예시: 1부터 10까지의 랜덤 숫자
+    return Math.floor(Math.random() * 3) + 1;
   }
 
   async onAuth(client: Client, options: { password: string | null }) {
