@@ -43,6 +43,12 @@ export class OfficeState extends Schema implements IOfficeState {
 
   @type([ChatMessage])
   chatMessages = new ArraySchema<ChatMessage>()
+
+  @type("boolean") 
+  quizInProgress: boolean = false;
+
+  @type({ set: 'string' })
+  quizParticipants = new SetSchema<string>()
 }
 
 export const whiteboardRoomIds = new Set<string>()

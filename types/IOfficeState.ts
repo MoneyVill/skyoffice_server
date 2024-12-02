@@ -29,4 +29,6 @@ export interface IOfficeState extends Schema {
   computers: MapSchema<IComputer>
   whiteboards: MapSchema<IWhiteboard>
   chatMessages: ArraySchema<IChatMessage>
+  quizParticipants: SetSchema<string> 
+  quizInProgress: Boolean
 }

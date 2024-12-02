@@ -24,7 +24,7 @@ export class SkyOffice extends Room<OfficeState> {
   private name: string
   private description: string
   private password: string | null = null
-  private quizInProgress: boolean = false;
+  private quizParticipants: Set<string> = new Set();
   private quizTimer: NodeJS.Timeout | null = null;
   private currentQuestionNumber: number = 0;
   private quizTimerStart: number | null = null;
@@ -168,10 +168,12 @@ export class SkyOffice extends Room<OfficeState> {
 
     // 클라이언트의 퀴즈 참여 요청 처리
     this.onMessage(Message.REQUEST_QUIZ, (client) => {
+      if (this.state.quizInProgress && !this.state.quizParticipants.has(client.sessionId)) {
+        this.state.quizParticipants.add(client.sessionId);
+      }
+
       this.dispatcher.dispatch(new QuizRequestCommand(), {
         client,
-        quizInProgress: this.quizInProgress,
-        currentQuestionNumber: this.currentQuestionNumber,
         timeUntilNextQuiz: this.getQuizRemainingTime(),
         remainingTime: this.getPreQuizRemainingTime(),
       })
@@ -179,6 +181,10 @@ export class SkyOffice extends Room<OfficeState> {
 
     // 클라이언트의 퀴즈 나가기 요청 처리
     this.onMessage(Message.LEAVE_QUIZ, (client) => {
+      if (this.state.quizParticipants.has(client.sessionId)) {
+        this.state.quizParticipants.delete(client.sessionId);
+      }
+
       this.dispatcher.dispatch(new QuizLeaveCommand(), {
         client,
       });
@@ -193,12 +199,12 @@ export class SkyOffice extends Room<OfficeState> {
   }
   
   startQuiz() {
-    this.quizInProgress = true;
+    this.state.quizInProgress = true;
   
     // 타이머 시작 시간 및 지속 시간 설정
     this.quizTimerStart = Date.now();
-    this.quizTimerDuration = 10000; // 밀리초 단위
-  
+    this.quizTimerDuration = 5000; // 밀리초 단위
+
     // 모든 클라이언트에게 퀴즈 시작 메시지 전송
     this.broadcast(Message.START_QUIZ, {
       curQuiz: this.currentQuestionNumber,
@@ -212,7 +218,7 @@ export class SkyOffice extends Room<OfficeState> {
   }
 
   endQuiz() {
-    this.quizInProgress = false;
+    this.state.quizInProgress = false;
 
     // 퀴즈 종료 메시지 전송 (필요하다면)
     this.broadcast(Message.END_QUIZ);
