@@ -180,14 +180,14 @@ export class SkyOffice extends Room<OfficeState> {
     })
 
     // 클라이언트의 퀴즈 나가기 요청 처리
-    this.onMessage(Message.LEAVE_QUIZ, (client) => {
-      if (this.state.quizParticipants.has(client.sessionId)) {
-        this.state.quizParticipants.delete(client.sessionId);
-      }
-
+    this.onMessage(Message.LEAVE_QUIZ, (client) => {      
       this.dispatcher.dispatch(new QuizLeaveCommand(), {
         client,
       });
+      
+      if (this.state.quizParticipants.has(client.sessionId)) {
+        this.state.quizParticipants.delete(client.sessionId);
+      }
     });
 
   }
