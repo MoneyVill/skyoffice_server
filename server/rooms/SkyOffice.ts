@@ -287,6 +287,7 @@ export class SkyOffice extends Room<OfficeState> {
   onLeave(client: Client, consented: boolean) {
     if (this.state.players.has(client.sessionId)) {
       this.state.players.delete(client.sessionId)
+      this.state.quizParticipants.delete(client.sessionId)
     }
     this.state.computers.forEach((computer) => {
       if (computer.connectedUser.has(client.sessionId)) {
