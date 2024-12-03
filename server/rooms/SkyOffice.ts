@@ -262,7 +262,7 @@ export class SkyOffice extends Room<OfficeState> {
   getQuizQuestionNumber() {
     // 문제 번호 선택 로직 (랜덤 또는 순차적으로)
     // 예시: 1부터 10까지의 랜덤 숫자
-    return Math.floor(Math.random() * 3) + 1;
+    return Math.floor(Math.random() * 40) + 1;
   }
 
   async onAuth(client: Client, options: { password: string | null }) {
